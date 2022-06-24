@@ -4,24 +4,17 @@ on:
 
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
   workflow_dispatch:
 
 jobs:
 
-  build-and-deploy:
+  build:
     -name: Build and deploy Gatsby site
      runs-on: ubuntu-latest
+     needs: build
 
     steps:
-
-      - name: Build
-        run: gatsby build
-      
-      - name: Verify build
-        run: ls -la public
 
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -37,14 +30,26 @@ jobs:
       - name: Install Gatsby CLI
         run: npm install -g gatsby-cli@2.12.34
 
-      - name: Copy to Ubuntu Server
-        uses: marcodallasanta/ssh-scp-deploy@v1.2.0
-        with:
-          local: 'mycode'
-          remote: '/home/azureuser/'
-          host: ${{secrets.REMOTE_HOST}}
-          user: ${{secrets.REMOTE_USER}}
-          key: ${{secrets.SERVER_SSH_KEY}}
-          ssh_options: -o StrictHostKeyChecking=no
-          pre_upload: echo "remove the files"
-          post_upload: sudo mv mycode/* /var/www/html/
+      - name: Build
+        run: gatsby build
+      
+      - name: Verify build
+        run: ls -la public
+
+  deploy:
+      -name: Build and deploy Gatsby site
+        runs-on: ubuntu-latest
+        needs: deploy
+
+      steps:
+        - name: Copy to Ubuntu Server
+          uses: marcodallasanta/ssh-scp-deploy@v1.2.0
+          with:
+            local: 'mycode'
+            remote: '/home/azureuser/'
+            host: ${{secrets.REMOTE_HOST}}
+            user: ${{secrets.REMOTE_USER}}
+            key: ${{secrets.SERVER_SSH_KEY}}
+            ssh_options: -o StrictHostKeyChecking=no
+            pre_upload: echo "remove the files"
+            post_upload: sudo mv mycode/* /var/www/html/
